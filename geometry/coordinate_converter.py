@@ -26,28 +26,30 @@ import math
 
 
 class CoordinateConverter():
+    _deg2rad = math.pi / 180.0
+    _rad2deg = 180.0 / math.pi
+
     def __init__(self, ellipsoid_name="", eer=0, epr=0):
         self._ELLIPSOID_EQUATOR_RADIUS = eer
         self._ELLIPSOID_POLAR_RADIUS = epr
         self._FLATTENING = (self._ELLIPSOID_EQUATOR_RADIUS - self._ELLIPSOID_POLAR_RADIUS) / self._ELLIPSOID_EQUATOR_RADIUS
         self._ECCENTRICITY_SQUARED = (eer**2 - epr**2) / eer**2
-        self._deg2rad = math.pi / 180
-        self._rad2deg = 180.0 / math.pi
 
-    def euclidean_distance_cart(self, x1, y1, z1, x2, y2, z2):
+    @staticmethod
+    def euclidean_distance_cart(x1, y1, z1, x2, y2, z2):
         return np.sqrt((x1-x2)**2+(y1-y2)**2+(z1-z2)**2)
 
-    def to_radius_from_xyz(self, xcart, ycart, zcart):
+    @staticmethod
+    def to_radius_from_xyz(xcart, ycart, zcart):
         return np.sqrt(xcart * xcart + ycart * ycart + zcart * zcart)
 
-    def to_xyz_from_latlon_and_radius(self, latitude, longitude, radius):
-        latitude = latitude * math.pi / 180.
-        longitude_w = (longitude - 180.) * math.pi / 180.
-        xcart = radius / np.sqrt((1 + np.tan(longitude_w)**2) * (1 + np.tan(latitude)**2))
-        xcart[np.abs(longitude) <= 270] *= -1
-        xcart[np.abs(longitude) <= 90] *= -1
-        ycart = xcart * np.tan(longitude_w)
-        zcart = np.sqrt(xcart**2 + ycart**2) * np.tan(latitude)
+    @classmethod
+    def to_xyz_from_latlon_and_radius(cls, latitude, longitude, radius):
+        latitude = (90. - latitude) * cls._deg2rad
+        longitude_w = (longitude - 180.) * cls._deg2rad
+        xcart = -radius * np.cos(longitude_w) * np.sin(latitude)
+        ycart = -radius * np.sin(longitude_w) * np.sin(latitude)
+        zcart = radius * np.cos(latitude)
         return xcart, ycart, zcart
 
     def get_ellipsoid_radius_from_latlon(self, latitude, longitude):

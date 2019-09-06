@@ -35,7 +35,7 @@ from scipy.interpolate import interp1d
 
 
 class EDR(RSData):
-    def __init__(self, dataset_name="no name", pri=0, presumming=1, filename_base="", use_gzip_and_iso8859_1=False, logger=None, read_hk_data=False):
+    def __init__(self, dataset_name="no name", pri=0, presumming=0, filename_base="", use_gzip_and_iso8859_1=False, logger=None, read_hk_data=False):
         super().__init__(dataset_name, pri, presumming, filename_base, use_gzip_and_iso8859_1, logger)
 
         # input file suffixes
@@ -286,7 +286,7 @@ class EDR(RSData):
         N_SAMPLES = 3600
         frame_count = -1
         if start_frame < 0 or (end_frame != -1 and start_frame > end_frame):
-            self.logger.log_messages(log_messages.ERR_MESSAGES["raw-data_frame-limits"])
+            self.logger.log_messages(log_messages.ERR_MESSAGES["data_frame-limits"])
             return None
         elif end_frame != -1:
             frame_count = end_frame-start_frame
@@ -294,20 +294,20 @@ class EDR(RSData):
             with open(self._DATA_FILENAME, 'rb') as fp:
                 fp.seek(start_frame*N_SAMPLES)
                 raw_data = np.fromfile(fp, dtype=np.int8, count=frame_count*N_SAMPLES).reshape((-1, 3600)).T.astype("float64")
-                self._raw_data = raw_data
+                self._data = raw_data
                 return True
         except IOError:
-            self.logger.log_messages(log_messages.ERR_MESSAGES["raw-data_read"])
-
+            self.logger.log_messages(log_messages.ERR_MESSAGES["data_read"])
+        self._data_already_read = True
         return False
 
     def generate_orbit_data(self, skip=1):
         '''
         Saves in self._orbit_data the following fields as a dictionary,
         interpolated to match 1:skip the frames of the raw data:
-        "time_offset_s", "rxwin_time_s", "Lat", "Lon", "Radius", "Vtang", "Vradial", "X", "Y", "Z", "VX", "VY", "VZ", "Roll", "Pitch", "Yaw", "SZA"
+        "time_offset_s", "rxwin_time_s", "Lat", "Lon", "Radius", "Vtang", "Vradial", "X", "Y", "Z", "Roll", "Pitch", "Yaw", "SZA"
         '''
-        geom_fields_to_interpolate = ["Lat", "Lon", "Radius", "Vtang", "Vradial", "X", "Y", "Z", "VX", "VY", "VZ", "Roll", "Pitch", "Yaw", "SZA"]
+        geom_fields_to_interpolate = ["Lat", "Lon", "Radius", "Vtang", "Vradial", "X", "Y", "Z", "Roll", "Pitch", "Yaw", "SZA"]
         geom_fields_to_convert_to_m = ["Radius", "X", "Y", "Z"]
         if self._ancillary_already_read:
             orbit_data = dict()
@@ -331,7 +331,6 @@ class EDR(RSData):
                 orbit_data[field] *= 1000.
 
             self._orbit_data = orbit_data
-            return self._orbit_data
 
         else:
             print("ERROR: ancillary data not yet loaded.")

@@ -23,7 +23,8 @@
 
 import sys
 from log.log import logger
-from input.sharad.data.edr.cosharps import EDR
+from input.sharad.data.edr.cosharps import EDR as EDR_COSHARPS
+from input.sharad.data.rdr.pds_us import RDR as RDR_PDS_US
 from geometry.coordinate_converter import CoordinateConverter
 from dem.mola.mola128 import MOLA128
 from simulators.drssim import DRSSim
@@ -33,43 +34,55 @@ import spectral.io.envi as envi                 # used for read/write of ENVI fi
 def main(argv=None):
     """
     This example:
-    - loads the ancillary part of a COSHARPS EDR product;
+    - defines a coordinate converter based on Mars ellipsoid characteristics
+    - loads MOLA128 radius data
+    - defines a dummy simulator using the pre-defined coordinate converter and
+      the MOLA128 DEM
+    - loads the ancillary part of a CO-SHARPS EDR product
     - interpolates the geometric data in order to get the orbit information
       of one frame every 26
-    - loads MOLA128 data
     - simulates the orbit
     - saves the simulation and the image representing uncertain frames on disk
+    - repeats the same steps using RDR PDS US data, also saving the RDR focused
+      data on disk
     """
 
     lg = logger(verbose=True)
 
+    # Mars ellipsoid characteristics
+    cc = CoordinateConverter("Mars IAU 2000", 3396190., 3376200.)
+
+    # the MOLA128 radius data are contained in a single ENVI file
+    m = MOLA128(filename_base="/yourpath/r128.hdr")        #mola_mars_data.hdr
+    m.read()
+
+    # definition of a dummy RS simulator using the Mars coordinate converter and the MOLA128 DEM
+    s = DRSSim(geom_obj=cc, dem_obj=m, n_processes=6)       # simulation parameters are contained in the DRSSim class
+
     # change fn_base with your OBS folder path+base file name (without suffixes)
-    fn_base = "/yourpath/OBS_1260201000_1/OBS_1260201000_1"
-    d = EDR(dataset_name="OBS_1260201000_1", filename_base=fn_base, logger=lg)
+    # EDR CO-SHARPS
+    fn_base = "/yourpath/OBS_1260201000_1"
+    d = EDR_COSHARPS(dataset_name="OBS_1260201000_1", filename_base=fn_base, logger=lg, use_gzip_and_iso8859_1=True)
     d.load(mode="ancillary")
-    od = d.generate_orbit_data(skip=26)
+    d.generate_orbit_data(skip=26)
+    od_edr = d.orbit_data
+    if od_edr is not None:
+        sim_image, uncert_image = s.simulate(od_edr)
+        envi.save_image("/yourpath/test_edr_sim.hdr", sim_image, force=True)
+        envi.save_image("/yourpath/test_edr_sim_uncert.hdr", uncert_image, force=True)
 
-    if od is not None:
+    # RDR PDS US
+    fn_base = "/yourpath/s_01260201"
+    d = RDR_PDS_US(dataset_name="s_01260201", filename_base=fn_base, logger=lg)
+    d.load(mode="full")
+    envi.save_image("/yourpath/test_rdr_data.hdr", d.data, force=True)
 
-        # # check interpolation
-        # from matplotlib import pyplot as pp
-        # pp.plot(od["time_offset_s"]+d._geom_data["timestamp"][0].astype("float64")/1000, od["Radius"])
-        # pp.plot(d._geom_data["timestamp"].astype("float64")/1000, d._geom_data["Radius"]*1000, "r+", markersize=10)
-        # pp.show()
-        # exit()
-
-        # Mars ellipsoid characteristics
-        cc = CoordinateConverter("Mars IAU 2000", 3396190., 3376200.)
-
-        # the MOLA128 data are contained in a single ENVI file
-        d = MOLA128(filename_base="/yourpath/mola_mars_data.hdr")
-        d.read()
-
-        s = DRSSim(geom_obj=cc, dem_obj=d, n_processes=6)       # simulation parameters are contained in the DRSSim class
-        sim_image, uncert_image = s.simulate(od)
-
-        envi.save_image("/yourpath/test.hdr", sim_image, force=True)
-        envi.save_image("/yourpath/test_uncert.hdr", uncert_image, force=True)
+    d.generate_orbit_data()
+    od_rdr = d.orbit_data
+    if od_rdr is not None:
+        sim_image, uncert_image = s.simulate(od_rdr)
+        envi.save_image("/yourpath/test_rdr_sim.hdr", sim_image, force=True)
+        envi.save_image("/yourpath/test_rdr_sim_uncert.hdr", uncert_image, force=True)
 
 
 if __name__ == "__main__":

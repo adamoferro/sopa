@@ -4,11 +4,14 @@ SOPA is thought to be a suite of open source algorithms for SHAllow RADar (SHARA
 
 At the time of writing the suite includes:
 - the possibility to load CO-SHARPS raw data (both echoes and full ancillary dataset);
+- the possibility to load PDS US RDR focused data (both echoes and ancillary dataset)*
 - DRSSim, a dummy radar sounder (RS) simulator.
 
 The project SOFA (SHARAD Open Focusing Attempt, http://af-projects.it/sofa) will be included here in the future in order to share the same interfaces for raw data reading.
 
 Unfortunately, almost no documentation is provided. An example program showing how to use the main functions can be found in the root of the project.
+
+* Orbits extracted from PDS US RDR data may be not sufficiently precise for supporting simulations and or focusing.
 
 Feel free to contact me for any help (contacts here: http://af-projects.it/contacts).
 

@@ -34,9 +34,10 @@ class DRSSim(object):
         self.act_sim_spacing = 50
         self.alt_sim_forward_max_distance = 500
         self.alt_sim_backward_max_distance = 500
-        self.act_sim_max_distance = 50000
+        self.act_sim_max_distance = 30000
         self.dt = 37.5e-9
         self.sim_n_samples = 1800
+        self.sim_top_offset_samples = 200
 
         self.geom_obj = geom_obj
         self.dem_obj = dem_obj
@@ -77,13 +78,16 @@ class DRSSim(object):
         local_direction_g = np.arctan2(UTMNorthing_after - UTMNorthing_before, UTMEasting_after - UTMEasting_before)
 
         # calculate reference rxwin and sc radius to be used as reference for frame time alignment
-        rxwin_ref = np.min(orbit_data["rxwin_time_s"])
         sc_radius_ref = np.min(orbit_data["Radius"])
         ellipsoid_radius = self.geom_obj.get_ellipsoid_radius_from_latlon(orbit_data["Lat"], orbit_data["Lon"])
         dem_radius = self.dem_obj.get_dem_radius_from_lat_lon(orbit_data["Lat"], orbit_data["Lon"])
         dem_radius_ref_id = np.argmax(dem_radius)
         ellipsoid_radius_ref = ellipsoid_radius[dem_radius_ref_id]
         sc_radius_and_ellipsoid_time_correction = ((sc_radius_ref - orbit_data["Radius"]) + (ellipsoid_radius - ellipsoid_radius_ref)) * 2. / self._C
+
+        # rxwin is calculated as the time delay that sets the "highest point" of the simulation at sim_top_offset_samples from the top border
+        t_surface_vect_ref = 2 * (orbit_data["Radius"] - dem_radius) / self._C
+        rxwin_ref = np.min(t_surface_vect_ref + sc_radius_and_ellipsoid_time_correction) - self.sim_top_offset_samples * self.dt
 
         self.sim_image = np.zeros([self.sim_n_samples, n_frames_to_be_simulated])   #, dtype="int16")   # see comment below
         self.uncert_image = np.zeros(self.sim_image.shape)                          #, dtype="uint8")
@@ -94,8 +98,8 @@ class DRSSim(object):
             ray.init(num_cpus=self.n_processes, object_store_memory=n_bytes_to_reserve)
 
             @ray.remote
-            def _simulate_frame_range_callback(id, orbit_data, frame_range, sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, dt, dem_obj, geom_obj, alt_sim_matrix, act_sim_matrix):
-                return DRSSim._simulate_frame_range(id, orbit_data, frame_range, sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, dt, dem_obj, geom_obj, alt_sim_matrix, act_sim_matrix)
+            def _simulate_frame_range_callback(id, n_processes, orbit_data, frame_range, sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, dt, dem_obj, geom_obj, alt_sim_matrix, act_sim_matrix):
+                return DRSSim._simulate_frame_range(id, n_processes, orbit_data, frame_range, sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, dt, dem_obj, geom_obj, alt_sim_matrix, act_sim_matrix)
 
             n_frames_per_subprocess = int(np.round(n_frames_to_be_simulated / self.n_processes))
             sub_frame_range_starts = np.arange(0, n_frames_to_be_simulated, n_frames_per_subprocess)
@@ -112,30 +116,32 @@ class DRSSim(object):
             for id in np.arange(self.n_processes):
                 sub_frame_range = np.arange(sub_frame_range_starts[id], sub_frame_range_stops[id])
                 sub_frame_ranges.append(sub_frame_range)
-                result_ids.append(_simulate_frame_range_callback.remote(id, orbit_data, sub_frame_range, self.sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, self.dt, dem_obj_id, geom_obj_id, alt_sim_matrix_id, act_sim_matrix_id))
+                result_ids.append(_simulate_frame_range_callback.remote(id, self.n_processes, orbit_data, sub_frame_range, self.sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, self.dt, dem_obj_id, geom_obj_id, alt_sim_matrix_id, act_sim_matrix_id))
 
             results = ray.get(result_ids)
 
             for id in np.arange(self.n_processes):
                 self.sim_image[:, sub_frame_ranges[id]] = results[id][0]
                 self.uncert_image[:, sub_frame_ranges[id]] = results[id][1]
+
+            ray.shutdown()
         else:
-            self.sim_image, self.uncert_image = DRSSim._simulate_frame_range(0, orbit_data, np.arange(n_frames_to_be_simulated), self.sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, self.dt, self.dem_obj, self.geom_obj, self.alt_sim_matrix, self.act_sim_matrix)
+            self.sim_image, self.uncert_image = DRSSim._simulate_frame_range(0, 1, orbit_data, np.arange(n_frames_to_be_simulated), self.sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, self.dt, self.dem_obj, self.geom_obj, self.alt_sim_matrix, self.act_sim_matrix)
 
         self.sim_image = self.sim_image.astype("int16")
         self.uncert_image = self.uncert_image.astype("uint8")
         return self.sim_image, self.uncert_image
 
     @staticmethod       # defined static to allow calling from ray avoiding the "pickling" of the object
-    def _simulate_frame_range(id, orbit_data, frame_range, sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, dt, dem_obj, geom_obj, alt_sim_matrix, act_sim_matrix):
+    def _simulate_frame_range(id, n_processes, orbit_data, frame_range, sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, dt, dem_obj, geom_obj, alt_sim_matrix, act_sim_matrix):
         _C = 299792458.
 
         n_frames_to_be_simulated = len(frame_range)
         sim_image = np.zeros([sim_n_samples, n_frames_to_be_simulated])         #, dtype="int16")   # int16 and uint8 saves memory but considerably slows down the processing as numpy cannot handle ints in a fast way
         uncert_image = np.zeros([sim_n_samples, n_frames_to_be_simulated])      #, dtype="uint8")
 
-        check_value = dem_obj.offset_to_be_added + dem_obj.dummy_value
-
+        status_str_pre = '\t'+"|\t\t"*id
+        status_str_post = "\t\t|"*(n_processes-id-1)
         last_status = -1
         for count, i_frame_tbs in enumerate(frame_range):
             if count == n_frames_to_be_simulated-1:
@@ -143,7 +149,7 @@ class DRSSim(object):
             else:
                 new_status = int(count / n_frames_to_be_simulated * 10) * 10
             if new_status != last_status:
-                print(id, ' '*(10*id), new_status)
+                print(status_str_pre + '{:>2}'.format(new_status) + status_str_post)
                 last_status = new_status
 
             local_direction = local_direction_g[i_frame_tbs]
@@ -157,9 +163,9 @@ class DRSSim(object):
             UTMNorthing_surface_matrix = UTMNorthing + (alt_sim_matrix * np.sin(local_direction) - act_sim_matrix * np.cos(local_direction))
             UTMEasting_surface_matrix = UTMEasting + (alt_sim_matrix * np.cos(local_direction) + act_sim_matrix * np.sin(local_direction))
             Lat_surface_matrix, Long_surface_matrix = geom_obj.UTM_to_LL(UTMNorthing_surface_matrix, UTMEasting_surface_matrix, UTMZone)
-            dem_surface_radius_matrix = dem_obj.get_dem_radius_from_lat_lon(Lat_surface_matrix, Long_surface_matrix) + dem_obj.offset_to_be_added
+            dem_surface_radius_matrix = dem_obj.get_dem_radius_from_lat_lon(Lat_surface_matrix, Long_surface_matrix)
 
-            dummy_check_matrix = (dem_surface_radius_matrix == check_value)
+            dummy_check_matrix = (dem_surface_radius_matrix == dem_obj.dummy_value)
             if dummy_check_matrix.any():
                 uncert_image[:, count] = 1
                 dem_surface_radius_matrix[dummy_check_matrix] = 0             # radius too far for being recorded in the simulation
@@ -169,7 +175,7 @@ class DRSSim(object):
             d_surface = geom_obj.euclidean_distance_cart(sc_x_cart_local, sc_y_cart_local, sc_z_cart_local, x_cart_surface_matrix, y_cart_surface_matrix, z_cart_surface_matrix)
 
             t_surface = 2. * d_surface / _C
-            sample_pos_surface = np.round(((t_surface - rxwin_ref + sc_radius_and_ellipsoid_time_correction[i_frame_tbs]) / dt)).astype("int")        # use rxwin_ref instaed of input_rxwin_data_t_local
+            sample_pos_surface = np.round(((t_surface - rxwin_ref + sc_radius_and_ellipsoid_time_correction[i_frame_tbs]) / dt)).astype("int")        # use rxwin_ref instead of input_rxwin_data_t_local
 
             d_surface = d_surface.flatten()
             sample_pos_surface = sample_pos_surface.flatten()

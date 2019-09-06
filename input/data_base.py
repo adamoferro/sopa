@@ -31,7 +31,7 @@ import gzip
 class RSData():
     """docstring for RSData."""
 
-    def __init__(self, dataset_name="no name", pri=0, presumming=1, filename_base="", use_gzip_and_iso8859_1=False, logger=None):
+    def __init__(self, dataset_name="no name", pri=0, presumming=0, filename_base="", use_gzip_and_iso8859_1=False, logger=None):
         self.dataset_name = dataset_name
         self.n_frames = 0
         self.pri = pri                      # in s
@@ -40,7 +40,7 @@ class RSData():
         self.use_gzip_and_iso8859_1 = use_gzip_and_iso8859_1
 
         self._orbit_data = None
-        self._raw_data = None
+        self._data = None
 
         # select the "open" function according to the selected encoding
         self.encoding = "UTF-8"
@@ -55,16 +55,16 @@ class RSData():
             self.logger = logger
 
     @property
-    def raw_data(self):
-        if self._raw_data is None:
-            print("ERROR: raw data not yet read.")
+    def data(self):
+        if self._data is None:
+            print("ERROR: data not yet read.")
             return None
         else:
-            return self._raw_data
+            return self._data
 
-    @raw_data.setter
-    def raw_data(self, value):
-        print("ERROR: cannot set raw data manually.")
+    @data.setter
+    def data(self, value):
+        print("ERROR: cannot set data manually.")
 
     @property
     def orbit_data(self):
@@ -94,5 +94,5 @@ class RSData():
     def _load_from_file(self, mode, force_reload):      # "virtual" method
         raise NotImplementedError
 
-    def generate_orbit_data(self, skip):                      # generates orbit data which match 1:1 with the raw data
+    def generate_orbit_data(self, skip):                      # generates orbit data which match 1:1 with the data
         raise NotImplementedError

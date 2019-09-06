@@ -116,6 +116,6 @@ class MOLA128(DEMBase):
 
     def _MOLAXY_to_radius_profile(self, x_vect, y_vect):
         # get vector containing MOLA radius corresponding to each frame to be processed (in the same order)
-        output_dem = self.dem[y_vect, x_vect].copy()
+        output_dem = self.dem[y_vect, x_vect].copy() + self.offset_to_be_added
         output_dem[self._mask] = self.dummy_value
         return output_dem
