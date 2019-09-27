@@ -23,6 +23,7 @@
 
 import sys
 from log.log import logger
+from input.sharad.data.edr.pds import EDR as EDR_PDS
 from input.sharad.data.edr.cosharps import EDR as EDR_COSHARPS
 from input.sharad.data.rdr.pds_us import RDR as RDR_PDS_US
 from geometry.coordinate_converter import CoordinateConverter
@@ -60,29 +61,40 @@ def main(argv=None):
     s = DRSSim(geom_obj=cc, dem_obj=m, n_processes=6)       # simulation parameters are contained in the DRSSim class
 
     # change fn_base with your OBS folder path+base file name (without suffixes)
-    # EDR CO-SHARPS
-    fn_base = "/yourpath/OBS_1260201000_1"
-    d = EDR_COSHARPS(dataset_name="OBS_1260201000_1", filename_base=fn_base, logger=lg, use_gzip_and_iso8859_1=True)
+    # EDR PDS
+    fn_base = "/yourpath/e_1260201_001_ss19_700_a"
+    d = EDR_PDS(dataset_name="edr1260201", filename_base=fn_base, logger=lg)
     d.load(mode="ancillary")
     d.generate_orbit_data(skip=26)
-    od_edr = d.orbit_data
-    if od_edr is not None:
-        sim_image, uncert_image = s.simulate(od_edr)
-        envi.save_image("/yourpath/test_edr_sim.hdr", sim_image, force=True)
-        envi.save_image("/yourpath/test_edr_sim_uncert.hdr", uncert_image, force=True)
+    od_pds_edr = d.orbit_data
+    if od_pds_edr is not None:
+        sim_image, uncert_image = s.simulate(od_pds_edr)
+        envi.write("/yourpath/test_pds-edr_sim", sim_image)
+        envi.write("/yourpath/test_pds-edr_sim_uncert", uncert_image)
+
+    # EDR CO-SHARPS
+    fn_base = "/yourpath/OBS_1260201000_1"
+    d = EDR_COSHARPS(dataset_name="OBS_1260201000_1", filename_base=fn_base, logger=lg)
+    d.load(mode="ancillary")
+    d.generate_orbit_data(skip=26)
+    od_cosharps_edr = d.orbit_data
+    if od_cosharps_edr is not None:
+        sim_image, uncert_image = s.simulate(od_cosharps_edr)
+        envi.write("/yourpath/test_cosharps-edr_sim", sim_image)
+        envi.write("/yourpath/test_cosharps-edr_sim_uncert", uncert_image)
 
     # RDR PDS US
     fn_base = "/yourpath/s_01260201"
     d = RDR_PDS_US(dataset_name="s_01260201", filename_base=fn_base, logger=lg)
     d.load(mode="full")
-    envi.save_image("/yourpath/test_rdr_data.hdr", d.data, force=True)
+    envi.write("/yourpath/test_pds-us-rdr_data", d.data)
 
     d.generate_orbit_data()
-    od_rdr = d.orbit_data
-    if od_rdr is not None:
-        sim_image, uncert_image = s.simulate(od_rdr)
-        envi.save_image("/yourpath/test_rdr_sim.hdr", sim_image, force=True)
-        envi.save_image("/yourpath/test_rdr_sim_uncert.hdr", uncert_image, force=True)
+    od_pds_us_rdr = d.orbit_data
+    if od_pds_us_rdr is not None:
+        sim_image, uncert_image = s.simulate(od_pds_us_rdr)
+        envi.write("/yourpath/test_pds-us-rdr_sim", sim_image)
+        envi.write("/yourpath/test_pds-us-rdr_sim_uncert", uncert_image)
 
 
 if __name__ == "__main__":

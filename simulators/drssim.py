@@ -47,14 +47,12 @@ class DRSSim(object):
         self.alt_sim_matrix = np.array([alt_sim_range]).T * np.ones([1, len(act_sim_range)])
         self.act_sim_matrix = np.array([act_sim_range]) * np.ones([len(alt_sim_range), 1])
 
-        multiprocessing_enabled = False
         if n_processes > 1:
             try:
                 import ray
-                multiprocessing_enabled = True
             except:
                 n_processes = 1
-                print("WARNING: Multiprocessing not possible on this machine. Working with 1 process.")
+                print("WARNING: Multiprocessing not possible on this machine (failed to import module ""ray""). Working with 1 process.")
         elif n_processes < 1:
             n_processes = 1
 
@@ -93,7 +91,7 @@ class DRSSim(object):
         self.uncert_image = np.zeros(self.sim_image.shape)                          #, dtype="uint8")
 
         if self.n_processes > 1:
-            n_bytes_to_reserve = int((self.dem_obj.dem.nbytes + self.alt_sim_matrix.nbytes + self.act_sim_matrix.nbytes)*1.10)  # calculate the amount of RAM to reserve for shared objects as 5% more of what summed here
+            n_bytes_to_reserve = int((self.dem_obj.dem.nbytes + self.alt_sim_matrix.nbytes + self.act_sim_matrix.nbytes)*1.10)  # calculate the amount of RAM to reserve for shared objects as 10% more of what summed here
             import ray
             ray.init(num_cpus=self.n_processes, object_store_memory=n_bytes_to_reserve)
 

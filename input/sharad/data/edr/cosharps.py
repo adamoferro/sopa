@@ -22,6 +22,7 @@
 #   must be acknowledged.
 
 # TODO:
+# - add skip to _load_raw_data
 # - handle data where more "Mode"s are present
 # - modify print with logger
 
@@ -311,8 +312,8 @@ class EDR(RSData):
         geom_fields_to_convert_to_m = ["Radius", "X", "Y", "Z"]
         if self._ancillary_already_read:
             orbit_data = dict()
-            orbit_data["time_offset_s"] = self._aux_data["time_offset_s"].copy()[0:-1:skip]
-            orbit_data["rxwin_time_s"] = self._aux_data["rxwin_time_us"][0:-1:skip] / 1e6 - self._DCG_DELAY
+            orbit_data["time_offset_s"] = self._aux_data["time_offset_s"].copy()[::skip]
+            orbit_data["rxwin_time_s"] = self._aux_data["rxwin_time_us"][::skip] / 1e6 - self._DCG_DELAY
 
             # unwrapping of longitude data to avoid wrong interpolation on the 0-360 degrees border
             self._geom_data["Lon"] = np.rad2deg(np.unwrap(np.deg2rad(self._geom_data["Lon"])))

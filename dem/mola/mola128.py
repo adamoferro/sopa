@@ -22,8 +22,8 @@
 #   must be acknowledged.
 
 from dem.dem_base import DEMBase
-import spectral as sp
 import numpy as np
+from io_utils import envi
 
 
 class MOLA128(DEMBase):
@@ -42,7 +42,7 @@ class MOLA128(DEMBase):
     def read(self):
         if self.filename_base != "":
             try:
-                self.dem = (sp.open_image(self.filename_base).read_band(0)).astype("int16")
+                self.dem = envi.read(self.filename_base)
                 self.dem_shape = self.dem.shape
                 return True
             except IOError:
@@ -63,10 +63,6 @@ class MOLA128(DEMBase):
             return None
 
     def _to_MOLAXY_from_LL(self, lat, long):
-        """
-        Returns np.nan when DEM does not contain the required point.
-        """
-
         mola_x = (np.round((long - self._MOLA_MIN_LONG) / self._MOLA_SAMPLING)).astype("int")
         mola_y = (np.round((self._MOLA_MAX_LAT - lat) / self._MOLA_SAMPLING)).astype("int")
 
@@ -81,36 +77,6 @@ class MOLA128(DEMBase):
         mola_y[mola_y < 0] = 0
         mola_x[mola_x >= self.dem_shape[1]] = 0
         mola_y[mola_y >= self.dem_shape[0]] = 0
-
-
-        # if allow_error:
-        #     mola_x[mola_x < 0] = 0
-        #     mola_y[mola_y < 0] = 0
-        #     mola_x[mola_x >= self.dem_shape[1]] = self.dem_shape[1]-1
-        #     mola_y[mola_y >= self.dem_shape[0]] = self.dem_shape[0]-1
-        # else:
-        #     mola_x_min = np.min(mola_x)
-        #     mola_x_max = np.max(mola_x)
-        #     mola_y_min = np.min(mola_y)
-        #     mola_y_max = np.max(mola_y)
-        #
-        #     if mola_x_min < 0 or mola_x_max >= self.dem_shape[1] or mola_y_min < 0 or mola_y_max >= self.dem_shape[0]:
-        #         # print("ERROR: radargram part to be processed is not fully contained in input MOLA DEM")
-        #         # print(mola_x_min)
-        #         # print(mola_x_max)
-        #         # print(mola_y_min)
-        #         # print(mola_y_max)
-        #         # print("---")
-        #         # print("long:",np.min(long),np.max(long))
-        #         # print("lat: ",np.min(lat),np.max(lat))
-        #         # print(self.dem_shape[1])
-        #         # print(self.dem_shape[0])
-        #         return None
-        #
-        # if recalc_LL:       # TODO *** unpredictable results when allow_error=True
-        #     recalc_lat = -mola_y * self._MOLA_SAMPLING + self._MOLA_MAX_LAT
-        #     recalc_long = mola_x * self._MOLA_SAMPLING + self._MOLA_MIN_LONG
-        #     return (mola_x, mola_y, recalc_lat, recalc_long)
 
         return (mola_x, mola_y)
 
