@@ -7,14 +7,18 @@ At the time of writing the suite includes:
   - PDS Italian EDR raw data (echoes and geometric data*);
   - CO-SHARPS raw data (echoes and full ancillary dataset);
   - PDS US RDR focused data (echoes and geometric data**)
-- dRSsim, a dummy radar sounder simulator.
+- dRSsim, a dummy radar sounder simulator***.
 
 The project SOFA (SHARAD Open Focusing Attempt, http://af-projects.it/sofa) will be included here in the future in order to share the same interfaces for raw data reading.
 
 Unfortunately, almost no documentation is provided. An example program showing how to use the main functions can be found in the root of the project.
 
 *Orbits extracted from PDS Italian data may be not sufficiently precise for data acquired before 2013.
+
 **Orbits extracted from PDS US RDR data may be not sufficiently precise for supporting simulations and or focusing.
+
+***The simulation principle is similar to that described in http://dx.doi.org/10.1109/TGRS.2012.2219315.
+
 
 Feel free to contact me for any help (contacts here: http://af-projects.it/contacts).
 

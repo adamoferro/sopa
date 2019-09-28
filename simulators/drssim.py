@@ -34,7 +34,7 @@ class dRSsim(object):
         self.act_sim_spacing = 50
         self.alt_sim_forward_max_distance = 500
         self.alt_sim_backward_max_distance = 500
-        self.act_sim_max_distance = 30000
+        self.act_sim_max_distance = 50000
         self.dt = 37.5e-9
         self.sim_n_samples = 1800
         self.sim_top_offset_samples = 200
