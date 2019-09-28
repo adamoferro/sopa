@@ -4,10 +4,10 @@ SOPA is thought to be a suite of open source algorithms for SHAllow RADar (SHARA
 
 At the time of writing the suite includes:
 - data reading with common interface for:
--- PDS Italian EDR data (echoes and geometric data*);
--- CO-SHARPS raw data (echoes and full ancillary dataset);
--- PDS US RDR focused data (echoes and geometric data**)
-- DRSSim, a dummy radar sounder (RS) simulator.
+ - PDS Italian EDR raw data (echoes and geometric data*);
+ - CO-SHARPS raw data (echoes and full ancillary dataset);
+ - PDS US RDR focused data (echoes and geometric data**)
+- dRSsim, a dummy radar sounder simulator.
 
 The project SOFA (SHARAD Open Focusing Attempt, http://af-projects.it/sofa) will be included here in the future in order to share the same interfaces for raw data reading.
 
@@ -31,8 +31,7 @@ SOPA has been tested only in a Linux environment using python v3.5 and the follo
 - numpy 1.17.0
 - scipy 1.3.1
 - bitstring (needed only for PDS Italian EDR data)
-- spectral 0.19
-- ray 0.7.3 (needed only for parallel computation in DRSSim, not mandatory)
+- ray 0.7.3 (needed only for parallel computation in dRSsim, not mandatory)
 
 ### Current version
 0.003

@@ -28,8 +28,8 @@ from input.sharad.data.edr.cosharps import EDR as EDR_COSHARPS
 from input.sharad.data.rdr.pds_us import RDR as RDR_PDS_US
 from geometry.coordinate_converter import CoordinateConverter
 from dem.mola.mola128 import MOLA128
-from simulators.drssim import DRSSim
-import spectral.io.envi as envi                 # used for read/write of ENVI files
+from simulators.drssim import dRSsim
+from io_utils import envi
 
 
 def main(argv=None):
@@ -58,7 +58,7 @@ def main(argv=None):
     m.read()
 
     # definition of a dummy RS simulator using the Mars coordinate converter and the MOLA128 DEM
-    s = DRSSim(geom_obj=cc, dem_obj=m, n_processes=6)       # simulation parameters are contained in the DRSSim class
+    s = dRSsim(geom_obj=cc, dem_obj=m, n_processes=6)       # simulation parameters are contained in the dRSsim class
 
     # change fn_base with your OBS folder path+base file name (without suffixes)
     # EDR PDS

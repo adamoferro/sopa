@@ -24,8 +24,8 @@
 import numpy as np
 
 
-class DRSSim(object):
-    """docstring for DRSSim."""
+class dRSsim(object):
+    """docstring for dRSsim."""
     _C = 299792458.
 
     def __init__(self, geom_obj, dem_obj, n_processes=1):
@@ -97,7 +97,7 @@ class DRSSim(object):
 
             @ray.remote
             def _simulate_frame_range_callback(id, n_processes, orbit_data, frame_range, sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, dt, dem_obj, geom_obj, alt_sim_matrix, act_sim_matrix):
-                return DRSSim._simulate_frame_range(id, n_processes, orbit_data, frame_range, sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, dt, dem_obj, geom_obj, alt_sim_matrix, act_sim_matrix)
+                return dRSsim._simulate_frame_range(id, n_processes, orbit_data, frame_range, sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, dt, dem_obj, geom_obj, alt_sim_matrix, act_sim_matrix)
 
             n_frames_per_subprocess = int(np.round(n_frames_to_be_simulated / self.n_processes))
             sub_frame_range_starts = np.arange(0, n_frames_to_be_simulated, n_frames_per_subprocess)
@@ -124,7 +124,7 @@ class DRSSim(object):
 
             ray.shutdown()
         else:
-            self.sim_image, self.uncert_image = DRSSim._simulate_frame_range(0, 1, orbit_data, np.arange(n_frames_to_be_simulated), self.sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, self.dt, self.dem_obj, self.geom_obj, self.alt_sim_matrix, self.act_sim_matrix)
+            self.sim_image, self.uncert_image = dRSsim._simulate_frame_range(0, 1, orbit_data, np.arange(n_frames_to_be_simulated), self.sim_n_samples, local_direction_g, UTMNorthing_g, UTMEasting_g, UTMZone_g, rxwin_ref, sc_radius_and_ellipsoid_time_correction, self.dt, self.dem_obj, self.geom_obj, self.alt_sim_matrix, self.act_sim_matrix)
 
         self.sim_image = self.sim_image.astype("int16")
         self.uncert_image = self.uncert_image.astype("uint8")
