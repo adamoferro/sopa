@@ -39,11 +39,13 @@ def main(argv=None):
     - loads MOLA128 radius data
     - defines a dummy simulator using the pre-defined coordinate converter and
       the MOLA128 DEM
-    - loads the ancillary part of a CO-SHARPS EDR product
+    - loads the ancillary part of a PDS Italian EDR product
+    - simulates the radargram using the orbit data (one frame every 26)
+    - saves the simulation and the image representing uncertain frames on disk
+    - loads the ancillary part of a CO-SHARPS raw product
     - interpolates the geometric data in order to get the orbit information
       of one frame every 26
-    - simulates the orbit
-    - saves the simulation and the image representing uncertain frames on disk
+    - simulates the radargram, and saves it to disk
     - repeats the same steps using RDR PDS US data, also saving the RDR focused
       data on disk
     """
@@ -54,7 +56,7 @@ def main(argv=None):
     cc = CoordinateConverter("Mars IAU 2000", 3396190., 3376200.)
 
     # the MOLA128 radius data are contained in a single ENVI file
-    m = MOLA128(filename_base="/yourpath/r128.hdr")        #mola_mars_data.hdr
+    m = MOLA128(filename_base="/yourpath/r128")        # MOLA radius data
     m.read()
 
     # definition of a dummy RS simulator using the Mars coordinate converter and the MOLA128 DEM
