@@ -5,6 +5,7 @@ SOPA is thought to be a suite of open source algorithms for SHAllow RADar (SHARA
 At the time of writing the suite includes:
 - data reading with common interface for:
   - PDS Italian EDR raw data (echoes and geometric data*);
+  - PDS Italian RDR focused data (echoes and geometric data*)
   - CO-SHARPS raw data (echoes and full ancillary dataset);
   - PDS US RDR focused data (echoes and geometric data**)
 - dRSsim, a dummy radar sounder simulator***.
@@ -38,7 +39,7 @@ SOPA has been tested only in a Linux environment using python v3.5 and the follo
 - ray 0.7.3 (needed only for parallel computation in dRSsim, not mandatory)
 
 ### Current version
-0.003
+0.004
 
 ### Disclaimer
 

@@ -25,6 +25,7 @@ import sys
 from log.log import logger
 from input.sharad.data.edr.pds import EDR as EDR_PDS
 from input.sharad.data.edr.cosharps import EDR as EDR_COSHARPS
+from input.sharad.data.rdr.pds import RDR as RDR_PDS
 from input.sharad.data.rdr.pds_us import RDR as RDR_PDS_US
 from geometry.coordinate_converter import CoordinateConverter
 from dem.mola.mola128 import MOLA128
@@ -35,19 +36,23 @@ from io_utils import envi
 def main(argv=None):
     """
     This example:
-    - defines a coordinate converter based on Mars ellipsoid characteristics
-    - loads MOLA128 radius data
-    - defines a dummy simulator using the pre-defined coordinate converter and
-      the MOLA128 DEM
-    - loads the ancillary part of a PDS Italian EDR product
-    - simulates the radargram using the orbit data (one frame every 26)
-    - saves the simulation and the image representing uncertain frames on disk
-    - loads the ancillary part of a CO-SHARPS raw product
-    - interpolates the geometric data in order to get the orbit information
-      of one frame every 26
-    - simulates the radargram, and saves it to disk
-    - repeats the same steps using RDR PDS US data, also saving the RDR focused
-      data on disk
+    1) defines a coordinate converter based on Mars ellipsoid characteristics
+    2) loads MOLA128 radius data
+    3) defines a dummy simulator using the pre-defined coordinate converter and
+       the MOLA128 DEM
+    4)
+        a) loads the ancillary part of a PDS Italian EDR product
+        b) simulates the radargram using the orbit data (one frame every 26)
+        c) saves the simulation and the image representing uncertain frames on disk
+    5) loads the ancillary part of a CO-SHARPS raw product
+        a) interpolates the geometric data in order to get the orbit information
+           of one frame every 26
+        b) simulates the radargram using the orbit data (one frame every 26)
+        c) saves the simulation and the image representing uncertain frames on disk
+    6) repeats the same steps using RDR PDS Italian data, also saving the RDR focused
+       data on disk
+    7) repeats the same steps using RDR PDS US data, also saving the RDR focused
+       data on disk
     """
 
     lg = logger(verbose=True)
@@ -84,6 +89,19 @@ def main(argv=None):
         sim_image, uncert_image = s.simulate(od_cosharps_edr)
         envi.write("/yourpath/test_cosharps-edr_sim", sim_image)
         envi.write("/yourpath/test_cosharps-edr_sim_uncert", uncert_image)
+
+    # RDR PDS
+    fn_base = "/yourpath/r_1260201_001_ss19_700_a"
+    d = RDR_PDS(dataset_name="rdr1260201", filename_base=fn_base, logger=lg)
+    d.load()                        # note 1: d.data is np.complex64 for PDS RDR data
+                                    # note 2: no "mode" is provided, as all data are contained in one unique file
+    envi.write("/yourpath/test_pds_rdr_data", d.data)      # data is automatically converted into power. If complex output is needed, use the complex_output=True flag
+    d.generate_orbit_data(skip=26)
+    od_pds_rdr = d.orbit_data
+    if od_pds_rdr is not None:
+        sim_image, uncert_image = s.simulate(od_pds_rdr)
+        envi.write("/yourpath/test_pds-rdr_sim", sim_image)
+        envi.write("/yourpath/test_pds-rdr_sim-uncert", uncert_image)
 
     # RDR PDS US
     fn_base = "/yourpath/s_01260201"
