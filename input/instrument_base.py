@@ -24,10 +24,13 @@
 class RSInstrument():
     """docstring for RSInstrument."""
 
-    def __init__(self, name, frequency, bandwidth):
+    def __init__(self, name, frequency, bandwidth, fast_time_sampling_frequency, chirp_duration, ref_v_platform):
         self.name = name
-        self.frequency = frequency      # both given in Hz
-        self.bandwidth = bandwidth
+        self.frequency = frequency                                          # Hz
+        self.bandwidth = bandwidth                                          # Hz
+        self.fast_time_sampling_frequency = fast_time_sampling_frequency    # Hz
+        self.chirp_duration = chirp_duration                                # s
+        self.ref_v_platform = ref_v_platform                                # m/s
 
     def __str__(self):
         return self.name + ", fc="+"{:.1f}".format(self.frequency/1e6) + " MHz, fb=" + "{:.1f}".format(self.bandwidth/1e6) + " MHz"

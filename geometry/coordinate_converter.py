@@ -52,25 +52,56 @@ class CoordinateConverter():
         zcart = radius * np.cos(latitude)
         return xcart, ycart, zcart
 
+    def get_frame_ids_from_skip_distance(self, lat, lon, skip_distance):
+        '''
+        Find the frame ids of frames approximately equally separated by
+        skip_distance meters. The distance is calculated as the euclidean
+        distance between points on the ellipsoid, assuming that the points
+        are sufficiently close to avoid arc calculations.
+        '''
+
+        x, y, z = self.get_ellipsoid_xyz_from_latlon(lat, lon)
+        distances = self.euclidean_distance_cart(x[1:], y[1:], z[1:], x[:-1], y[:-1], z[:-1])
+        distance_min = np.min(distances)
+        distances = np.insert(distances, 0, 0)
+        distances_cum = np.cumsum(distances)
+        distances_cum = np.array([distances_cum]).T
+
+        required_distances = np.arange(0, distances_cum[-1], skip_distance)
+        required_distances = np.array([required_distances]).T
+
+        from scipy.spatial import cKDTree
+        t = cKDTree(distances_cum)
+        d, i = t.query(required_distances)
+
+        # estimate max number of frames per interval
+        diffs = np.diff(distances_cum[i], axis=0)
+        min_n_frames_per_interval = np.ceil(np.min(diffs) / distance_min)
+        max_n_frames_per_interval = np.ceil(np.max(diffs) / distance_min)
+
+        return i, min_n_frames_per_interval, max_n_frames_per_interval
+
     def get_ellipsoid_radius_from_latlon(self, latitude, longitude):
         latitude = latitude * math.pi / 180.
         ellipsoid_local_radius = np.sqrt(self._ELLIPSOID_EQUATOR_RADIUS**2 / (1 + (1. / ((1 - self._FLATTENING)**2) - 1)*(np.sin(latitude)**2)))
         return ellipsoid_local_radius
 
     def get_ellipsoid_xyz_from_latlon(self, latitude, longitude):
-        radius = self.get_ellipsoid_radius_from_latlong(latitude, longitude)
-        latitude = latitude * math.pi / 180.
-        longitude_w = (longitude - 180.) * math.pi / 180.
-        xcart, ycart, zcart = self.to_xyz_from_latlon_and_radius(latitude, longitude_w, radius)
+        radius = self.get_ellipsoid_radius_from_latlon(latitude, longitude)
+        # latitude = latitude * math.pi / 180.
+        # longitude_w = (longitude - 180.) * math.pi / 180.
+        xcart, ycart, zcart = self.to_xyz_from_latlon_and_radius(latitude, longitude, radius)
         return xcart, ycart, zcart
 
     # by David Wolever @ http://stackoverflow.com/questions/2827393/angles-between-two-n-dimensional-vectors-in-python
     # extended for matrix use by Adamo Ferro
-    def _unit_vector(self, vector):
+    @staticmethod
+    def _unit_vector(vector):
         """ Returns the unit vector of the vector.  """
         return vector / np.linalg.norm(vector, axis=0)
 
-    def _angle_between(self, v1, v2):
+    @staticmethod
+    def angle_between(v1, v2):
         """ Returns the angle in radians between vectors 'v1' and 'v2'::
 
                 >>> angle_between((1, 0, 0), (0, 1, 0))
@@ -81,8 +112,8 @@ class CoordinateConverter():
                 3.141592653589793
 
         """
-        v1_u = self._unit_vector(v1)
-        v2_u = self._unit_vector(v2)
+        v1_u = CoordinateConverter._unit_vector(v1)
+        v2_u = CoordinateConverter._unit_vector(v2)
 
         if len(np.array(v2).shape) <= 1:
             angle = np.arccos(np.dot(v1_u, v2_u))
@@ -98,7 +129,7 @@ class CoordinateConverter():
                     angle[i_y, i_x] = np.dot(v1_u[:, i_y, i_x], v2_u[:, i_y, i_x])
             angle = np.arccos(angle)
             nans = np.isnan(angle)
-            angle[nans] = (((v1_u[:, nans] == v2_u[:,nans]).all()) * np.pi)
+            angle[nans] = (((v1_u[:, nans] == v2_u[:, nans]).all()) * np.pi)
         return angle
 
     def LL_to_UTM(self, LatInput, LongInput):
@@ -383,3 +414,8 @@ class CoordinateConverter():
             Long=360+Long
 
         return (Lat, Long)
+
+
+class MARS_IAU2000(CoordinateConverter):
+    def __init__(self):
+        super().__init__("Mars IAU2000", 3396190., 3376200.)

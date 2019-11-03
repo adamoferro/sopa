@@ -32,11 +32,12 @@ import os
 import glob
 import numpy as np
 import datetime
+from scipy import ndimage as nd
 from scipy.interpolate import interp1d
 
 
 class EDR(RSData):
-    def __init__(self, dataset_name="no name", pri=0, presumming=0, filename_base="", use_gzip_and_iso8859_1=False, logger=None, read_hk_data=False):
+    def __init__(self, dataset_name="no name", pri=0, presumming=0, filename_base="", use_gzip_and_iso8859_1=False, logger=None, read_hk_data=False, keep_data_with_problems=False):
         super().__init__(dataset_name, pri, presumming, filename_base, use_gzip_and_iso8859_1, logger)
 
         # input file suffixes
@@ -49,9 +50,16 @@ class EDR(RSData):
 
         # required fields and values in the ancillary data to consider the data valid
         # note: it is mandatory to set these listis and they must have the same length
-        self._FIELDS_TO_SEARCH = ["Number_of_Modes", "Lost_Packets", "Wrong_Packets", "Anomalies", "Oper_Mode", "PRI_Value", "Presumming", "Resolution", "Phase_Comp", "Compression", "Tracking", "Data_Blocks"]
-        self._FIELDS_TO_SEARCH_DTYPE = [int, int, int, int, str, float, int, int, str, str, str, int]
-        self._FIELDS_TO_SEARCH_CONSTRAIN = [1, 0, 0, 0, "SS", 1428, "", "", "None", "Static", "Disabled", ""]
+        self._FIELDS_TO_SEARCH = ["Number_of_Modes", "Oper_Mode", "PRI_Value", "Presumming", "Resolution", "Phase_Comp", "Compression", "Tracking", "Data_Blocks"]
+        self._FIELDS_TO_SEARCH_DTYPE = [int, str, float, int, int, str, str, str, int]
+        self._FIELDS_TO_SEARCH_CONSTRAIN = [1, "SS", 1428, "", "", "None", "Static", "Disabled", ""]
+
+        self._keep_data_with_problems = keep_data_with_problems
+        if not self._keep_data_with_problems:
+            self._FIELDS_TO_SEARCH += ["Lost_Packets", "Wrong_Packets", "Anomalies"]
+            self._FIELDS_TO_SEARCH_DTYPE += [int, int, int]
+            self._FIELDS_TO_SEARCH_CONSTRAIN += [0, 0, 0]
+
         self._N_FIELDS_TO_SEARCH = len(self._FIELDS_TO_SEARCH)
 
         self._HEADER_FIELD_N_FRAMES = "Data_Blocks"
@@ -59,6 +67,7 @@ class EDR(RSData):
         self._HEADER_FIELD_PRESUMMING = "Presumming"
         self._READ_HK_DATA_FLAG = read_hk_data
 
+        self._DT = 3 / 80e6
         self._DCG_DELAY = 11.98e-6      # digital chirp generator delay, used in the calculation of the rxwin opening time
 
         self._ancillary_already_read = False
@@ -73,6 +82,8 @@ class EDR(RSData):
                                     #              }
         self._hk_data = None        # dictionary: "timestamp_ms", "des_temp", "des_5v", "des_12v", "des_2v5", "rx_temp", "tx_temp", "tx_lev", "tx_curr"
                                     #   timestamps are not related to frames
+
+        self._data_type = "raw"
 
     def _load_from_file(self, mode="full", force_reload=False):      # filename_base is set, checked by super
         if self._check_file_presence(mode):
@@ -302,6 +313,14 @@ class EDR(RSData):
         self._data_already_read = True
         return False
 
+    @staticmethod
+    def _fill_data_holes(data, hole_max_value=0):
+        '''
+        Fill holes in data using a nearest neighbour approach.
+        '''
+        ids = nd.distance_transform_edt(data <= hole_max_value, return_distances=False, return_indices=True)
+        return data[tuple(ids)]
+
     def generate_orbit_data(self, skip=1):
         '''
         Saves in self._orbit_data the following fields as a dictionary,
@@ -314,6 +333,8 @@ class EDR(RSData):
             orbit_data = dict()
             orbit_data["time_offset_s"] = self._aux_data["time_offset_s"].copy()[::skip]
             orbit_data["rxwin_time_s"] = self._aux_data["rxwin_time_us"][::skip] / 1e6 - self._DCG_DELAY
+            if self._keep_data_with_problems:
+                orbit_data["rxwin_time_s"] = self._fill_data_holes(orbit_data["rxwin_time_s"])
 
             # unwrapping of longitude data to avoid wrong interpolation on the 0-360 degrees border
             self._geom_data["Lon"] = np.rad2deg(np.unwrap(np.deg2rad(self._geom_data["Lon"])))
@@ -331,7 +352,10 @@ class EDR(RSData):
             for field in geom_fields_to_convert_to_m:
                 orbit_data[field] *= 1000.
 
+            orbit_data["dt"] = self._DT
+
             self._orbit_data = orbit_data
+            self._correct_lon()
 
         else:
             print("ERROR: ancillary data not yet loaded.")

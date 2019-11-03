@@ -38,6 +38,8 @@ class RDR(RSData):
         self._DATA_SUFFIX = "_rgram.img"
         self._ORBIT_SUFFIX = "_geom.tab"
 
+        self._DT = 3 / 80e6
+
         self._ancillary_already_read = False
         self._data_already_read = False
 
@@ -45,6 +47,8 @@ class RDR(RSData):
                                     #                "names": ("column_id", "timestamp", "Lat", "Lon", "MarsRadius", "Radius", "Vradial", "Vtang", "SZA", "PhaseDist"),
                                     #                "formats": ("i", "datetime64[ms]", "d", "d", "d", "d", "d", "d", "d", "d")
                                     #              }
+
+        self._data_type = "focused"
 
     def _load_from_file(self, mode="full", force_reload=False):      # filename_base is set, checked by super
         if self._check_file_presence(mode):
@@ -151,7 +155,9 @@ class RDR(RSData):
             orbit_data["Radius"] *= 1000.
             orbit_data["X"], orbit_data["Y"], orbit_data["Z"] = CoordinateConverter.to_xyz_from_latlon_and_radius(orbit_data["Lat"], orbit_data["Lon"], orbit_data["Radius"])
             orbit_data["time_offset_s"] = (self._geom_data["timestamp"][::skip].astype("float64")-self._geom_data["timestamp"][0].astype("float64"))/1000.
+            orbit_data["dt"] = self._DT
             self._orbit_data = orbit_data
+            self._correct_lon()
 
         else:
             print("ERROR: ancillary data not yet loaded.")

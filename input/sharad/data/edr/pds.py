@@ -77,6 +77,8 @@ class EDR(RSData):
         self._rxwin_steps = None
         self._geom_data = None      # numpy array, see _read_raw_data_geom_file for the structure
 
+        self._data_type = "raw"
+
     def _load_from_file(self, mode="full", force_reload=False):      # filename_base is set, checked by super
         if self._check_file_presence(mode):
             load_ok1 = True
@@ -331,7 +333,10 @@ class EDR(RSData):
                 print("WARNING: rxwin_time is contained in the raw data, which has not been yet downloaded. Returning zeros.")
                 orbit_data["rxwin_time_s"] = np.zeros(orbit_data["Radius"].shape)
 
+            orbit_data["dt"] = self._DT
+
             self._orbit_data = orbit_data
+            self._correct_lon()
 
         else:
             print("ERROR: ancillary data not yet loaded.")

@@ -41,6 +41,7 @@ class RSData():
 
         self._orbit_data = None
         self._data = None
+        self._data_type = ""
 
         # select the "open" function according to the selected encoding
         self.encoding = "UTF-8"
@@ -53,6 +54,10 @@ class RSData():
             self.logger = fake_logger()
         else:
             self.logger = logger
+
+    def _correct_lon(self):
+        if self._orbit_data is not None:
+            self._orbit_data["Lon"][self._orbit_data["Lon"] < 0] = 360 + self._orbit_data["Lon"][self._orbit_data["Lon"] < 0]
 
     @property
     def data(self):
@@ -91,8 +96,11 @@ class RSData():
             print("ERROR: dataset base filename not set.")
             return False
 
+    def set_orbit_data_from_ext(self, ext_orbit_data):
+        self._orbit_data = ext_orbit_data
+
     def _load_from_file(self, mode, force_reload):      # "virtual" method
         raise NotImplementedError
 
-    def generate_orbit_data(self, skip):                      # generates orbit data which match 1:1 with the data
+    def generate_orbit_data(self, skip):                # generates orbit data which match 1:1 with the data
         raise NotImplementedError

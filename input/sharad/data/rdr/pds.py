@@ -66,6 +66,8 @@ class RDR(RSData):
         self._header_data = None    # dictionary, general values (e.g., PRI, presumming)
         self._whole_data = None
 
+        self._data_type = "focused"
+
     def _load_from_file(self, mode=None, force_reload=False):      # filename_base is set, checked by super
         # no "mode", only "data" because everything is contained in one file
         if self._check_file_presence():
@@ -263,8 +265,10 @@ class RDR(RSData):
                 orbit_data[field] *= 1000.
 
             orbit_data["rxwin_time_s"] = self._whole_data["RECEIVE_WINDOW_OPENING_TIME"][::skip]*self._DT_ADC - self._DCG_DELAY + (0 if self.pri > 1500e-6 else self.pri)
+            orbit_data["dt"] = self._DT
 
             self._orbit_data = orbit_data
+            self._correct_lon()
 
         else:
             print("ERROR: data not yet loaded.")

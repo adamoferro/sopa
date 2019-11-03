@@ -8,9 +8,8 @@ At the time of writing the suite includes:
   - PDS Italian RDR focused data (echoes and geometric data*)
   - CO-SHARPS raw data (echoes and full ancillary dataset);
   - PDS US RDR focused data (echoes and geometric data**)
-- dRSsim, a dummy radar sounder simulator***.
-
-The project SOFA (SHARAD Open Focusing Attempt, http://af-projects.it/sofa) will be included here in the future in order to share the same interfaces for raw data reading.
+- an "essential" version of SOFA (SHARAD Open Focusing Attempt, http://af-projects.it/sofa), a focuser that, besides standard nadir focusing, allows squinted synthetic aperture radar processing***;
+- dRSsim, a dummy radar sounder surface clutter simulator****.
 
 Unfortunately, almost no documentation is provided. An example program showing how to use the main functions can be found in the root of the project.
 
@@ -18,7 +17,9 @@ Unfortunately, almost no documentation is provided. An example program showing h
 
 **Orbits extracted from PDS US RDR data may be not sufficiently precise for supporting simulations and or focusing.
 
-***The simulation principle is similar to that described in http://dx.doi.org/10.1109/TGRS.2012.2219315.
+***By now, SOFA can handle only night time radargrams as no correction of ionosphere effects has been implemented yet.
+
+****The simulation principle is similar to that described in http://dx.doi.org/10.1109/TGRS.2012.2219315.
 
 
 Feel free to contact me for any help (contacts here: http://af-projects.it/contacts).
@@ -36,10 +37,10 @@ SOPA has been tested only in a Linux environment using python v3.5 and the follo
 - numpy 1.17.0
 - scipy 1.3.1
 - bitstring (needed only for PDS Italian EDR data)
-- ray 0.7.3 (needed only for parallel computation in dRSsim, not mandatory)
+- ray 0.7.3 (needed only for parallel computation in dRSsim and SOFA, not mandatory)
 
 ### Current version
-0.004
+0.01
 
 ### Disclaimer
 

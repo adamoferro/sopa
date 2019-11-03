@@ -1,0 +1,49 @@
+Nov 3, 2019
+- added an "essential" version of the SOFA focuser, with some improvements and fully integrated with the other SOPA components
+- dRSsim simulations are now created in order to match 1:1 focused data. Note: the matching precision depends on the precision of orbit and DEM data
+- added the possibility to define the skip distance expressed in meters rather than in frames (so it's independent on presumming) for both dRSsim and SOFA
+- created a new subfolder "processing" which includes simulators and focusers
+- added the _BaseProcessingParameters that is shared between simulators and focusers in order to simulate/focus with the same parameters
+- added the possibility to plug orbit data generated from an external source
+- added a legacy reader for orbits previously generated for SOFA (list of files with SOFA-required format)
+- moved some instrument definitions to RSInstrument base class
+- added the possibility to use CO-SHARPS data with decoding errors by filling (orbit) no data gaps with a nearest neighbor approach
+- other minor changes and improvements
+- created this CHANGELOG file
+
+
+Sep 29, 2019
+- added support for PDS Italian RDR data
+- io_utils/envi.py: automatically determine data type when writing and
+handling of complex data
+- other minor changes and bug fixes
+
+
+Sep 28, 2019
+1) bug fixes
+2) corrected list in README
+3) - added note in README
+   - increased default across-track distance for dRSsim
+
+
+Sep 27, 2019
+- added support for PDS Italian EDR data
+- switched ENVI file I/O from spectral to GDAL, using very basic
+self-written functions (spectral could not manage large files)
+- other minor bug fixes
+
+
+Sep 6, 2019
+- added support for PDS RDR US data
+- mola128.py: summation of offset_to_be_added done implicitly
+- coordinate_converter.py: converted some methods to static and
+classmethod
+- drssim.py: rxwin is calculated as the time delay that sets the
+"highest point" of the simulation at sim_top_offset_samples from the top
+border
+- example.py: updated
+- other minor changes
+
+
+Aug 26, 2019
+First commit.
