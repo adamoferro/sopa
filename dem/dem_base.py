@@ -29,6 +29,7 @@ class DEMBase():
         self.filename_base = filename_base
         self.dummy_value = dummy_value
         self.dem = None
+        self.deg_sampling = 0
         self.offset_to_be_added = 0
 
     def __str__(self):

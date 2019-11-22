@@ -7,9 +7,12 @@ At the time of writing the suite includes:
   - PDS Italian EDR raw data (echoes and geometric data*);
   - PDS Italian RDR focused data (echoes and geometric data*)
   - CO-SHARPS raw data (echoes and full ancillary dataset);
-  - PDS US RDR focused data (echoes and geometric data**)
+  - PDS US RDR focused data (echoes and geometric data**);
 - an "essential" version of SOFA (SHARAD Open Focusing Attempt, http://af-projects.it/sofa), a focuser that, besides standard nadir focusing, allows squinted synthetic aperture radar processing***;
-- dRSsim, a dummy radar sounder surface clutter simulator****.
+- surface clutter simulators****:
+  - dRSsim, a dummy radar sounder surface clutter simulator;
+  - sfRSsim, an enhanced simulator using square facets that can use a cos^exp law to reduce the effect of surfaces not facing the radar;
+- plotting tools for quick visualization of focused radargrams, simulations, ground distance images, and first return maps superimposed to the DEM.
 
 Unfortunately, almost no documentation is provided. An example program showing how to use the main functions can be found in the root of the project.
 
@@ -19,7 +22,7 @@ Unfortunately, almost no documentation is provided. An example program showing h
 
 ***By now, SOFA can handle only night time radargrams as no correction of ionosphere effects has been implemented yet.
 
-****The simulation principle is similar to that described in http://dx.doi.org/10.1109/TGRS.2012.2219315.
+****The simulation principles are similar to those described in http://dx.doi.org/10.1109/TGRS.2012.2219315.
 
 
 Feel free to contact me for any help (contacts here: http://af-projects.it/contacts).
@@ -34,13 +37,14 @@ SOPA has been tested only in a Linux environment using python v3.5 and the follo
 - glob (needed only for parsing CO-SHARPS data)
 - datetime
 - gzip (needed only if txt files related to CO-SHARPS ancillary data have been downloaded gzipped)
-- numpy 1.17.0
-- scipy 1.3.1
+- numpy 1.17.4
+- scipy 1.3.2
 - bitstring (needed only for PDS Italian EDR data)
-- ray 0.7.3 (needed only for parallel computation in dRSsim and SOFA, not mandatory)
+- ray 0.7.3 (needed only for parallel computation in surface clutter simulators and SOFA, not mandatory)
+- matplotlib 3.0.3 (needed only for plotting classes)
 
 ### Current version
-0.01
+0.02
 
 ### Disclaimer
 

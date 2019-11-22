@@ -1,3 +1,17 @@
+Nov 22, 2019
+- dem/mola/mola128.py: added some utility functions and renamed other existing functions
+- geometry/coordinate_converter.py: added some utility functions and one bug fix
+- processing/simulators/*:
+  - sim_base.py: grouped some common initial functions into the new _SIMBase class
+  - drssim.py:
+    - added Gaussian smoothing of the input DEM to avoid "stripes" in the simulations
+    - calculation of ground distance from the nadir point for each contribution of the simulation
+    - saving of the lat/long position of the first simulated echo sample in range for each frame
+    - full vectorization of single frame simulation (removed the final range for)
+  - sfrssim.py: new simulator using square facets and a cos^exp law to reduce the contribution of facets not facing the radar
+- added the module plot_utils containing some classes for quick plotting of focused radargrams, simulations, ground distance images, and first return maps superimposed to the DEM
+
+
 Nov 3, 2019
 - added an "essential" version of the SOFA focuser, with some improvements and fully integrated with the other SOPA components
 - dRSsim simulations are now created in order to match 1:1 focused data. Note: the matching precision depends on the precision of orbit and DEM data

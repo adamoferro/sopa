@@ -29,9 +29,10 @@ class CoordinateConverter():
     _deg2rad = math.pi / 180.0
     _rad2deg = 180.0 / math.pi
 
-    def __init__(self, ellipsoid_name="", eer=0, epr=0):
+    def __init__(self, ellipsoid_name="", eer=0, epr=0, mr=0):
         self._ELLIPSOID_EQUATOR_RADIUS = eer
         self._ELLIPSOID_POLAR_RADIUS = epr
+        self._MEAN_RADIUS = mr
         self._FLATTENING = (self._ELLIPSOID_EQUATOR_RADIUS - self._ELLIPSOID_POLAR_RADIUS) / self._ELLIPSOID_EQUATOR_RADIUS
         self._ECCENTRICITY_SQUARED = (eer**2 - epr**2) / eer**2
 
@@ -51,6 +52,43 @@ class CoordinateConverter():
         ycart = -radius * np.sin(longitude_w) * np.sin(latitude)
         zcart = radius * np.cos(latitude)
         return xcart, ycart, zcart
+
+    @classmethod
+    def add_radius_offset_to_orbit(cls, orbit_data, offset_array):
+        new_orbit_data = orbit_data.copy()
+        new_orbit_data["Radius"] = orbit_data["Radius"] + offset_array
+        new_orbit_data["X"], new_orbit_data["Y"], new_orbit_data["Z"] = cls.to_xyz_from_latlon_and_radius(orbit_data["Lat"], orbit_data["Lon"], new_orbit_data["Radius"])
+        return new_orbit_data
+
+    def to_latlon_area_from_circle_area(self, lat, lon, radius):
+        lat_n = 0
+        lat_s = 0
+        lon_e = 0
+        lon_w = 0
+        ratio = radius / self._MEAN_RADIUS
+
+        if radius / self._MEAN_RADIUS >= np.pi/2:
+            return None
+
+        delta_lat = self._rad2deg * ratio
+        lat_s = lat - delta_lat
+        lat_n = lat + delta_lat
+
+        if lat_n >= 90:
+            lon_w = 0
+            lon_e = 360
+            lat_n = 90
+        elif lat_s <= -90:
+            lon_w = 0
+            lon_e = 360
+            lat_s = -90
+        else:
+            lat_f = self._deg2rad * (90 - np.abs(lat))
+            delta_lon = self._rad2deg * np.arcsin(np.sin(ratio) / np.sin(lat_f))
+            lon_w = lon - delta_lon
+            lon_e = lon + delta_lon
+
+        return lat_n, lat_s, lon_e, lon_w
 
     def get_frame_ids_from_skip_distance(self, lat, lon, skip_distance):
         '''
@@ -96,7 +134,7 @@ class CoordinateConverter():
     # by David Wolever @ http://stackoverflow.com/questions/2827393/angles-between-two-n-dimensional-vectors-in-python
     # extended for matrix use by Adamo Ferro
     @staticmethod
-    def _unit_vector(vector):
+    def unit_vector(vector):
         """ Returns the unit vector of the vector.  """
         return vector / np.linalg.norm(vector, axis=0)
 
@@ -112,8 +150,8 @@ class CoordinateConverter():
                 3.141592653589793
 
         """
-        v1_u = CoordinateConverter._unit_vector(v1)
-        v2_u = CoordinateConverter._unit_vector(v2)
+        v1_u = CoordinateConverter.unit_vector(v1)
+        v2_u = CoordinateConverter.unit_vector(v2)
 
         if len(np.array(v2).shape) <= 1:
             angle = np.arccos(np.dot(v1_u, v2_u))
@@ -373,8 +411,8 @@ class CoordinateConverter():
         ZoneLetter=""
         NorthernHemisphere=0 #1 for northern hemispher, 0 for southern
 
-        x = UTMEasting - 500000.0 #remove 500,000 meter offset for longitude
-        y = UTMNorthing
+        x = UTMEasting.copy() - 500000.0 #remove 500,000 meter offset for longitude
+        y = UTMNorthing.copy()
 
         ZoneNumber = int(fixed_UTMZone[:-1])
         ZoneLetter=fixed_UTMZone[-1]
@@ -418,4 +456,4 @@ class CoordinateConverter():
 
 class MARS_IAU2000(CoordinateConverter):
     def __init__(self):
-        super().__init__("Mars IAU2000", 3396190., 3376200.)
+        super().__init__("Mars (IAU2000)", 3396190., 3376200., 3389500.)

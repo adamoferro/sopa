@@ -163,6 +163,11 @@ class SOFA(object):
         return chirp_fft_conj
 
     def focus(self):
+
+        if self._frames_to_be_focused_end >= self._n_input_frames:
+            print("ERROR: last frame to be focused after the end of the input data.")
+            return None
+
         # Estimation of average number of frames corresponding to the defined squint offset
         input_sc_alt = self.data_obj.orbit_data["Radius"] - self._dem_radius_profile
         mean_altitude = np.average(input_sc_alt)
@@ -317,7 +322,7 @@ class SOFA(object):
             input_parameters.append((input_data_frame_start, input_data_frame_end, frames_to_be_focused_in_this_block, frames_to_be_processed_start, self._SIZE_RANGE_FFT, data_samples, phasor, self._C, self._wc, input_rxwin_data_t, chirp_fft_conj, self._N_OUTPUT_SAMPLES, OUTPUT_SAMPLES, self._dt, input_scr_data, input_theta, input_phi, self._n_half_aperture_frames, self._n_aperture_frames, self._CORRECT_RANGE_MIGRATION, input_scx_data, input_scy_data, input_scz_data, self._COMPENSATE_DOPPLER_PHASE, self._lmbda_min, self._azimuth_weighting_windows, self._n_gaussian_filters, self._gf_std_devs, self._gf_power_coefficients, self._doppler_half_window_width, squint_offset_approx_frames, t_frame_base, dem_radius_profile, fftfreqs, delay_start_shifts))
 
         if self.n_processes > 1:
-            n_bytes_to_reserve = int((self.data_obj.data.nbytes)*1.25)  # calculate the amount of RAM to reserve for shared objects as 75% more of raw data
+            n_bytes_to_reserve = int((self.data_obj.data.nbytes)*2.)  # calculate the amount of RAM to reserve for shared objects as 75% more of raw data
             import ray
             ray.init(num_cpus=self.n_processes, redis_max_memory=int(n_bytes_to_reserve*.85), object_store_memory=n_bytes_to_reserve)
 

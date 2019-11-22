@@ -21,6 +21,8 @@
 #   (e.g., scientific papers, posters, images, other softwares)
 #   must be acknowledged.
 
+# TODO add limit checks
+
 from dem.dem_base import DEMBase
 import numpy as np
 from io_utils import envi
@@ -37,6 +39,7 @@ class MOLA128(DEMBase):
 
         self._mask = None
 
+        self.deg_sampling = self._MOLA_SAMPLING
         self.offset_to_be_added = 3396000       # as per MOLA labels
 
     def read(self):
@@ -56,15 +59,31 @@ class MOLA128(DEMBase):
 
     def get_dem_radius_from_lat_lon(self, lat, lon):
         if self.dem is not None:
-            mola_x, mola_y = self._to_MOLAXY_from_LL(lat, lon)
-            return self._MOLAXY_to_radius_profile(mola_x, mola_y)
+            mola_x, mola_y = self.to_XY_from_LL(lat, lon)
+            return self._XY_vectors_to_radius(mola_x, mola_y)
         else:
             print("ERROR: MOLA DEM not yet loaded.")
             return None
 
-    def _to_MOLAXY_from_LL(self, lat, long):
-        mola_x = (np.round((long - self._MOLA_MIN_LONG) / self._MOLA_SAMPLING)).astype("int")
-        mola_y = (np.round((self._MOLA_MAX_LAT - lat) / self._MOLA_SAMPLING)).astype("int")
+    def get_dem_radius_and_latlon_grid_from_latlon_area(self, lat_n, lat_s, lon_e, lon_w):
+        if self.dem is not None:
+            lat_vector = np.arange(lat_s, lat_n+self.deg_sampling, self.deg_sampling)
+            lon_vector = np.arange(lon_w, lon_e+self.deg_sampling, self.deg_sampling)
+            lon_vector[lon_vector < 0] = lon_vector[lon_vector < 0] + 360
+            latlon_mesh_lat, latlon_mesh_lon = np.meshgrid(lat_vector, lon_vector)
+            mola_x, mola_y = self.to_XY_from_LL(latlon_mesh_lat, latlon_mesh_lon)
+            return latlon_mesh_lat, latlon_mesh_lon, self._XY_vectors_to_radius(mola_x, mola_y)
+        else:
+            print("ERROR: MOLA DEM not yet loaded.")
+            return None
+
+    def to_XY_from_LL(self, lat, long, return_as_float=False):
+        mola_x = (long - self._MOLA_MIN_LONG) / self.deg_sampling
+        mola_y = (self._MOLA_MAX_LAT - lat) / self.deg_sampling
+
+        if not return_as_float:
+            mola_x = np.round(mola_x).astype("int")
+            mola_y = np.round(mola_y).astype("int")
 
         if len(mola_x.shape) == 0:
             mola_x = np.array([mola_x])
@@ -80,7 +99,16 @@ class MOLA128(DEMBase):
 
         return (mola_x, mola_y)
 
-    def _MOLAXY_to_radius_profile(self, x_vect, y_vect):
+    def to_LL_from_XY(self, x, y):
+        lat = -y * self.deg_sampling + self._MOLA_MAX_LAT
+        lon = x * self.deg_sampling + self._MOLA_MIN_LONG
+        return (lat, lon)
+
+    def XY_ranges_to_radius(self, x_min, x_max, y_min, y_max):
+        output_dem = self.dem[y_min:y_max, x_min:x_max].copy() + self.offset_to_be_added
+        return output_dem
+
+    def _XY_vectors_to_radius(self, x_vect, y_vect):
         # get vector containing MOLA radius corresponding to each frame to be processed (in the same order)
         output_dem = self.dem[y_vect, x_vect].copy() + self.offset_to_be_added
         output_dem[self._mask] = self.dummy_value

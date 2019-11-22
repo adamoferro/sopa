@@ -22,15 +22,19 @@
 #   must be acknowledged.
 
 import sys
+import numpy as np
 from log.log import logger
 from input.sharad.instrument import SHARAD
 from input.sharad.data.edr.pds import EDR as EDR_PDS
 from geometry.coordinate_converter import MARS_IAU2000
 from dem.mola.mola128 import MOLA128
 from processing.parameters import FocuserParameters
-from processing.simulators.drssim import dRSsim
+from processing.simulators.sfrssim import sfRSsim
+# from processing.simulators.drssim import dRSsim         # uncomment if needed
 from processing.focusers.sofa import SOFA
 from io_utils import envi
+from plot_utils.tracks import TrackPlotOnDEM, TrackAndFirstReturnsPlotOnDEM
+from plot_utils.radargrams import SimulationPlot, GroundDistancePlot, RadargramPlot
 
 
 def main(argv=None):
@@ -41,11 +45,13 @@ def main(argv=None):
     3) loads MOLA128 radius data
     4) creates an object containing the parameters used in the focuser (that
        will be used also by the simulator)
-    5) defines a dummy simulator using the pre-defined coordinate converter, the
+    5) defines a square facets simulator using the pre-defined coordinate converter, the
        MOLA128 DEM and the parameter object
     6) loads a PDS Italian EDR product
     7) simulates the radargram using the orbit data and saves the result on disk
-    8) focuses the data and saves the result on disk
+    8) creates some plots: simulation, first return positions, minimum ground distance
+       of clutter contributions for each simulation sample
+    9) focuses the data, saves the result on disk and plots the focused radargram
 
     Examples of how to read other data formats are commented at the end of the code.
     """
@@ -78,8 +84,11 @@ def main(argv=None):
     # definition of focuser and simulator parameters
     pars = FocuserParameters(frame_start=FRAME_START, frame_end=FRAME_END, meters_skip=METERS_SKIP, frame_half_aperture=FRAME_HALF_APERTURE, squint_angle=SQUINT_ANGLE)
 
-    # definition of a dummy RS simulator using the Mars coordinate converter and the MOLA128 DEM
-    s = dRSsim(geom_obj=cc, dem_obj=m, param_obj=pars, n_processes=6)       # simulation parameters are contained in the DRSSim class
+    # definition of a square facets RS simulator using the Mars coordinate converter and the MOLA128 DEM
+    s = sfRSsim(geom_obj=cc, dem_obj=m, param_obj=pars, n_processes=6)       # simulation parameters are contained in the DRSSim class
+
+    # ...or dRSsim:
+    # s = dRSsim(geom_obj=cc, dem_obj=m, param_obj=pars, n_processes=6)       # simulation parameters are contained in the DRSSim class
 
     # EDR PDS
     fn_base = EDR_PDS_INPUT_FILENAME_BASE
@@ -87,9 +96,32 @@ def main(argv=None):
     d.load(mode="full")
     d.generate_orbit_data()
     if d.orbit_data is not None:
-        sim_image, uncert_image = s.simulate(d.orbit_data)
+
+        # plot the track path on the DEM
+        tpod = TrackPlotOnDEM(m, d.orbit_data["Lat"], d.orbit_data["Lon"], title="Spacecraft ground track on DEM (full track)")
+        tpod.plot()
+
+        # simulate surface clutter radargram
+        sim_image, uncert_image, first_return_lats, first_return_lons, ground_distance_min_image, ground_distance_max_image = s.simulate(d.orbit_data)
+
+        # save results on disk
         envi.write(EDR_PDS_OUTPUT_SIM_FILENAME_BASE, sim_image)
         envi.write(EDR_PDS_OUTPUT_SIM_FILENAME_BASE + "_uncert", uncert_image)
+
+        # plot the simulated radargram
+        # only the top part of the simulation is shown (the top point is calculated dinamically)
+        top_point = np.min(np.argmin(np.isnan(ground_distance_min_image).astype(int), axis=0)) - 50
+        bottom_point = top_point + 1000
+        sp = SimulationPlot(sim_image, top_point=top_point, bottom_point=bottom_point, title="Radargram simulation with sfRSsim\n(square facets and cos^exp function)")
+        sp.plot()
+
+        # plot the track path and the location of the first simulated returns on the DEM
+        tfrpod = TrackAndFirstReturnsPlotOnDEM(m, d.orbit_data["Lat"], d.orbit_data["Lon"], first_return_lats, first_return_lons)
+        tfrpod.plot()
+
+        # plot the image showing the minimum ground distance from nadir of each simulated range sample
+        gdp = GroundDistancePlot(ground_distance_min_image/1000., top_point=top_point, bottom_point=bottom_point, title="Distance [km] of the closest facet contributing\nto each radargram sample simulation")
+        gdp.plot()
 
         # get the DEM radius profile related to the spacecraft track, to be used later by the focuser
         dem_radius_profile = m.get_dem_radius_from_lat_lon(d.orbit_data["Lat"], d.orbit_data["Lon"])
@@ -103,6 +135,10 @@ def main(argv=None):
             focused_rdr = f.focus()
             if focused_rdr is not None:
                 envi.write(EDR_PDS_OUTPUT_FOC_FILENAME_BASE + "_ha-" + str(pars.frame_half_aperture) + "_s-" + str(pars.squint_angle), focused_rdr)
+
+                # plot the focused radargram
+                rp = RadargramPlot(focused_rdr, top_point=top_point, bottom_point=bottom_point, title="Radargram")
+                rp.plot()
 
     # ------ OTHER INPUT EXAMPLES ------
     # NOTES:
